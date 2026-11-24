@@ -8,11 +8,19 @@ request status, author and date, all in one keyboard-driven view.
 
 ## Install
 
+With Homebrew (macOS):
+
+```sh
+brew install stratovarius93/tap/gitree
+```
+
+Or with Go:
+
 ```sh
 go install github.com/Stratovarius93/gitree@latest
 ```
 
-Make sure `$(go env GOPATH)/bin` is in your `PATH`. Then run it inside any git
+(make sure `$(go env GOPATH)/bin` is in your `PATH`). Then run it inside any git
 repository (or pass a path):
 
 ```sh
