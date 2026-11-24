@@ -10,9 +10,30 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// version is set at build time with -ldflags "-X main.version=v1.2.3".
+var version = "dev"
+
+const usage = `gitree - a GitKraken-style commit graph for the terminal
+
+Usage:
+  gitree [path]     open the repository at path (default: current directory)
+  gitree --version  print the version
+  gitree --help     show this help
+
+Press ? inside gitree to see all keys.
+`
+
 func main() {
 	path := "."
 	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "-v", "--version", "version":
+			fmt.Println("gitree", version)
+			return
+		case "-h", "--help", "help":
+			fmt.Print(usage)
+			return
+		}
 		path = os.Args[1]
 	}
 	repo, err := git.Open(path)
