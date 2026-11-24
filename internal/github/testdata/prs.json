@@ -1,0 +1,12 @@
+[
+ {"number":1,"title":"A","state":"OPEN","isDraft":true,"reviewDecision":"","headRefName":"a","baseRefName":"main","url":"https://github.com/o/r/pull/1"},
+ {"number":2,"title":"B","state":"OPEN","isDraft":false,"reviewDecision":"APPROVED","headRefName":"b","baseRefName":"main","url":"https://github.com/o/r/pull/2"},
+ {"number":3,"title":"C","state":"OPEN","isDraft":false,"reviewDecision":"CHANGES_REQUESTED","headRefName":"c","baseRefName":"main","url":"https://github.com/o/r/pull/3"},
+ {"number":4,"title":"D","state":"MERGED","isDraft":false,"reviewDecision":"APPROVED","headRefName":"d","baseRefName":"main","url":"https://github.com/o/r/pull/4"},
+ {"number":5,"title":"E","state":"CLOSED","isDraft":false,"reviewDecision":"","headRefName":"e","baseRefName":"main","url":"https://github.com/o/r/pull/5"},
+ {"number":6,"title":"F","state":"OPEN","isDraft":false,"reviewDecision":"","headRefName":"f","baseRefName":"main","url":"https://github.com/o/r/pull/6"},
+ {"number":10,"title":"G open","state":"OPEN","isDraft":false,"reviewDecision":"","headRefName":"g","baseRefName":"main","url":"u10"},
+ {"number":20,"title":"G merged","state":"MERGED","isDraft":false,"reviewDecision":"","headRefName":"g","baseRefName":"main","url":"u20"},
+ {"number":5,"title":"H closed","state":"CLOSED","isDraft":false,"reviewDecision":"","headRefName":"h","baseRefName":"main","url":"u5"},
+ {"number":9,"title":"H merged","state":"MERGED","isDraft":false,"reviewDecision":"","headRefName":"h","baseRefName":"main","url":"u9"}
+]
