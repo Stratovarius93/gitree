@@ -201,3 +201,54 @@ func TestConnectorWithFullLabel(t *testing.T) {
 	assert.NotContains(t, label, "━", "a pill that fills the column leaves no room")
 	assert.Equal(t, "━", cells[w.Label].ch, "the separator still connects")
 }
+
+func graphText(g string, n int) string {
+	s := ""
+	for _, c := range cellsOf(g)[:n] {
+		s += c.ch
+	}
+	return s
+}
+
+func TestConnectGraphStopsAtOtherEdges(t *testing.T) {
+	plain := func(s string) string { return s } // graph lines as the renderer's plain glyphs
+	cases := map[string]string{
+		"│ │─│─○": "│ │─│─○", // the node's own edge starts right left of it: nothing to draw over
+		"│ ╭─╯ ○": "│ ╭─╯━○", // stops at another lane's bend
+		"╭─┴─○":   "╭─┴─○",
+		"│ │ ○":   "┿━┿━○", // only spaces and crossings: drawn all the way
+	}
+	for in, want := range cases {
+		got := connectGraph(plain(in), len([]rune(in))-1, "#7daea3")
+		assert.Equal(t, want, graphText(got, len([]rune(in))), "for %q", in)
+	}
+}
+
+func TestConnectorNotDrawnToClippedNode(t *testing.T) {
+	commits := []git.Commit{
+		{Hash: "a1", Parents: []string{"c3"}, Subject: "on main", Refs: []git.Ref{{Name: "main", Kind: git.LocalBranch}}},
+		{Hash: "b2", Parents: []string{"c3"}, Subject: "on topic", Refs: []git.Ref{{Name: "topic", Kind: git.LocalBranch, IsHead: true}}},
+		{Hash: "c3", Subject: "root"},
+	}
+	r := BuildRows(commits, nil, nil, nil, "")[1]
+	w := ComputeWidths(160, 6, 0, 18)
+	w.Graph = 2 // the node (cell 2) is clipped
+	cells := cellsOf(RenderRow(r, w, false, testNow))
+	assert.Equal(t, w.sum(), len(cells))
+	for i := w.Label; i < w.Label+sepWidth+w.Graph; i++ {
+		assert.NotEqual(t, "━", cells[i].ch, "cell %d: no connector toward a node off screen", i)
+	}
+}
+
+func TestConnectorLeavesSpaceAfterSuffix(t *testing.T) {
+	r := tintRows()[0]
+	r.Labels = append(r.Labels, Label{Name: "v1", Kind: LabelTag})
+	w := ComputeWidths(160, 6, 0, 18)
+	label := graphText(RenderRow(r, w, false, testNow), w.Label)
+	assert.Contains(t, label, "+1 ━")
+}
+
+func TestMixClamps(t *testing.T) {
+	assert.Equal(t, "#ffffff", colors.Mix("#ffffff", "#000000", 2))
+	assert.Equal(t, "#000000", colors.Mix("#ffffff", "#000000", -1))
+}

@@ -68,6 +68,7 @@ func Mix(fg, bg string, a float64) string {
 	if !okF || !okB {
 		return bg
 	}
+	a = min(max(a, 0), 1)
 	out := "#"
 	for i := range 3 {
 		v := float64(f[i])*a + float64(b[i])*(1-a)

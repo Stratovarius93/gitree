@@ -31,28 +31,39 @@ func laneBar(base lipgloss.Style, hex, tint string) string {
 // space after them filled by a connector toward the graph.
 func connectLabel(labels []Label, hex string, width int) string {
 	s, used := renderLabelContent(labels, hex, width)
-	if free := width - used; free > 0 {
-		s += lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render(strings.Repeat("━", free))
+	free := width - used
+	if free <= 0 {
+		return s
 	}
-	return s
+	// Pills and PR chips end in their own padding; the gray " +N" does not,
+	// so the line keeps a space away from it.
+	if plain := ansi.Strip(s); plain != "" && !strings.HasSuffix(plain, " ") {
+		s += " "
+		free--
+	}
+	return s + lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render(strings.Repeat("━", free))
 }
 
-// connectGraph continues the connector through graph cells [0, node): empty
-// cells and horizontal lines become ━ in the lane color, a crossing lane's │
-// becomes ┿ in that lane's own color, so neither line is cut.
+// connectGraph continues the connector through the graph cells left of the
+// node: walking left from the node, empty cells become ━ in the lane color and
+// a crossing lane's │ becomes ┿ in that lane's own color, so neither line is
+// cut. It stops at the first other glyph (an edge, a bend, a merge): drawing
+// over those would recolor other lanes' lines or hide the node's own edge.
 func connectGraph(g string, node int, hex string) string {
 	line := lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render("━")
-	var b strings.Builder
-	for i := 0; i < node; i++ {
-		seg := ansi.Cut(g, i, i+1)
-		switch ansi.Strip(seg) {
-		case " ", "─", "":
-			b.WriteString(line)
+	segs := make([]string, node)
+	for i := range segs {
+		segs[i] = ansi.Cut(g, i, i+1)
+	}
+	for i := node - 1; i >= 0; i-- {
+		switch ansi.Strip(segs[i]) {
+		case " ", "":
+			segs[i] = line
 		case "│":
-			b.WriteString(strings.Replace(seg, "│", "┿", 1))
+			segs[i] = strings.Replace(segs[i], "│", "┿", 1)
 		default:
-			b.WriteString(seg)
+			i = -1 // stop
 		}
 	}
-	return b.String() + ansi.Cut(g, node, ansi.StringWidth(g))
+	return strings.Join(segs, "") + ansi.Cut(g, node, ansi.StringWidth(g))
 }
