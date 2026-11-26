@@ -3,6 +3,7 @@ package ui
 import (
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -57,6 +58,9 @@ type (
 		commits []git.Commit
 		append  bool
 		err     error
+		// fp is the refs fingerprint taken just before a full (non-append)
+		// load read the log ("" for pages or when it could not be taken).
+		fp string
 	}
 	wipLoadedMsg struct {
 		files []git.FileChange
@@ -140,6 +144,9 @@ type Model struct {
 	fetching  bool // a git fetch is in flight
 	autoFetch bool // fetch every AutoFetchInterval (see EnableAutoFetch)
 	external  bool // lazygit has the terminal: auto-fetch ticks are skipped
+
+	polling     bool   // follow outside changes (see EnablePolling)
+	fingerprint string // refs fingerprint of the last full log load
 }
 
 // New returns a model for repo; Init starts loading.
@@ -168,6 +175,7 @@ func (m Model) Init() tea.Cmd {
 	if m.autoFetch {
 		cmds = append(cmds, m.autoFetchTick())
 	}
+	cmds = append(cmds, m.refsPollTick(), m.wipPollTick())
 	return tea.Batch(cmds...)
 }
 
@@ -178,8 +186,14 @@ func (m Model) loadLog(skip int, appendPage bool) tea.Cmd {
 func (m Model) loadLogN(skip, limit int, appendPage bool) tea.Cmd {
 	repo, scope, gen := m.repo, m.scope, m.gen
 	return func() tea.Msg {
+		// Taken before the log is read: a change racing the load is seen
+		// by the next poll (at worst one extra reload), never missed.
+		var fp string
+		if !appendPage {
+			fp, _ = repo.Fingerprint()
+		}
 		commits, err := repo.Log(scope, skip, limit)
-		return logLoadedMsg{gen: gen, scope: scope, limit: limit, skip: skip, commits: commits, append: appendPage, err: err}
+		return logLoadedMsg{gen: gen, scope: scope, limit: limit, skip: skip, commits: commits, append: appendPage, err: err, fp: fp}
 	}
 }
 
@@ -269,6 +283,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.clearStatus("wip")
+		if slices.Equal(msg.files, m.wip) {
+			return m, nil // a poll found nothing new: no rebuild, no flicker
+		}
 		m.wip = msg.files
 		m.rebuild()
 		return m, m.syncPanels()
@@ -295,6 +312,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.onPRs(msg)
 	case autoFetchTickMsg:
 		return m.onAutoFetchTick()
+	case refsPollTickMsg:
+		return m.onRefsPollTick()
+	case wipPollTickMsg:
+		return m.onWIPPollTick()
+	case fingerprintMsg:
+		return m.onFingerprint(msg)
+	case tea.FocusMsg:
+		return m.onFocus()
 	case netActionDoneMsg:
 		return m.onNetActionDone(msg)
 	case actionDoneMsg:
@@ -354,6 +379,9 @@ func (m Model) onLog(msg logLoadedMsg) (tea.Model, tea.Cmd) {
 		m.commits = append(m.commits, msg.commits...)
 	} else {
 		m.commits = msg.commits
+		if msg.fp != "" {
+			m.fingerprint = msg.fp
+		}
 	}
 	m.loaded = true
 	limit := msg.limit

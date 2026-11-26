@@ -45,7 +45,7 @@ func main() {
 		}
 		os.Exit(1)
 	}
-	if _, err := tea.NewProgram(ui.New(repo, ui.RealSystem{}).EnableAutoFetch(), tea.WithAltScreen()).Run(); err != nil {
+	if _, err := tea.NewProgram(ui.New(repo, ui.RealSystem{}).EnableAutoFetch().EnablePolling(), tea.WithAltScreen(), tea.WithReportFocus()).Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "gitree: %v\n", err)
 		os.Exit(1)
 	}

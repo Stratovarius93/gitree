@@ -12,7 +12,7 @@ import (
 )
 
 // AutoFetchInterval is how often the repo is fetched in the background.
-const AutoFetchInterval = 5 * time.Minute
+const AutoFetchInterval = time.Minute
 
 // fetchTimeout bounds one `git fetch` so a dead remote cannot hang the app.
 const fetchTimeout = 60 * time.Second
