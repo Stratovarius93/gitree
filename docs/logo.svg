@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="128" viewBox="0 0 440 128" role="img" aria-label="gitree">
+  <rect x="0" y="0" width="440" height="128" rx="18" fill="#282828"/>
+  <!-- commit graph: main lane plus two branches -->
+  <g fill="none" stroke-width="5" stroke-linecap="round">
+    <path d="M36 24 V104" stroke="#8ec07c"/>
+    <path d="M36 32 C36 46 64 40 64 56 V74 C64 90 36 86 36 100" stroke="#fabd2f"/>
+    <path d="M36 28 C36 40 92 30 92 48 V60" stroke="#fb4934"/>
+  </g>
+  <g stroke-width="4">
+    <circle cx="36" cy="24" r="8" fill="#282828" stroke="#8ec07c"/>
+    <circle cx="64" cy="64" r="8" fill="#282828" stroke="#fabd2f"/>
+    <circle cx="92" cy="60" r="8" fill="#282828" stroke="#fb4934"/>
+    <circle cx="36" cy="104" r="9" fill="#8ec07c" stroke="#8ec07c"/>
+  </g>
+  <!-- wordmark -->
+  <text x="124" y="78" font-family="'JetBrains Mono','Fira Code',Menlo,Consolas,monospace" font-size="58" font-weight="700" fill="#ebdbb2">gi<tspan fill="#8ec07c">tree</tspan></text>
+  <text x="127" y="104" font-family="'JetBrains Mono','Fira Code',Menlo,Consolas,monospace" font-size="14" fill="#a89984">commit graph for the terminal</text>
+</svg>

@@ -1,10 +1,23 @@
-# gitree
+<p align="center">
+  <img src="docs/logo.svg" alt="gitree" width="440">
+</p>
 
+<p align="center">
+  <a href="https://github.com/Stratovarius93/gitree/releases/latest"><img src="https://img.shields.io/github/v/release/Stratovarius93/gitree?style=flat-square&color=8ec07c&label=version" alt="Latest release"></a>
+  <a href="https://github.com/Stratovarius93/gitree/stargazers"><img src="https://img.shields.io/github/stars/Stratovarius93/gitree?style=flat-square&color=fabd2f" alt="GitHub stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Stratovarius93/gitree?style=flat-square&color=83a598" alt="License: MIT"></a>
+  <img src="https://img.shields.io/github/go-mod/go-version/Stratovarius93/gitree?style=flat-square&color=d3869b" alt="Go version">
+</p>
+
+<p align="center">
 A terminal app that shows your repository as a GitKraken-style commit table:
 a colored commit graph, branch and tag labels in their own column, pull
 request status, author and date, all in one keyboard-driven view.
+</p>
 
-<!-- TODO: add a screenshot here -->
+![Diff preview of a changed file](docs/screenshots/diff-preview.png)
+
+![In-app help with keys, dialogs and the PR icon legend](docs/screenshots/help.png)
 
 ## Install
 
