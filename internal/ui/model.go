@@ -11,6 +11,7 @@ import (
 	"github.com/Stratovarius93/gitree/internal/git"
 	"github.com/Stratovarius93/gitree/internal/github"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -145,6 +146,10 @@ type Model struct {
 	autoFetch bool // fetch every AutoFetchInterval (see EnableAutoFetch)
 	external  bool // lazygit has the terminal: auto-fetch ticks are skipped
 
+	spin      spinner.Model // busy indicator in the status bar and panels
+	spinOn    bool          // animate it (see EnableSpinner)
+	animating bool          // a spinner tick chain is running
+
 	polling     bool   // follow outside changes (see EnablePolling)
 	fingerprint string // refs fingerprint of the last full log load
 }
@@ -163,6 +168,7 @@ func New(repo *git.Repo, sys System) Model {
 		gen:      1,
 		loading:  true,
 		fetchPRs: github.FetchPRs,
+		spin:     newSpinner(),
 
 		execProcess: tea.ExecProcess,
 		stashSeen:   map[string]bool{},
@@ -247,9 +253,21 @@ func (m *Model) maybeLoadMore() tea.Cmd {
 	return m.loadLog(len(m.commits), true)
 }
 
-// Update routes messages: load results are handled in every mode, keys by mode.
+// Update routes a message and starts the spinner if the model became busy.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	next, cmd := m.update(msg)
+	nm := next.(Model)
+	if spin := nm.startSpin(); spin != nil {
+		return nm, tea.Batch(cmd, spin)
+	}
+	return nm, cmd
+}
+
+// update routes messages: load results are handled in every mode, keys by mode.
+func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case spinner.TickMsg:
+		return m.onSpinTick(msg)
 	case tea.WindowSizeMsg:
 		m.width, m.height = max(msg.Width, 1), max(msg.Height, 1)
 		m.scrollToCursor()
@@ -612,14 +630,17 @@ func (m Model) Status() string {
 		return " " + m.search.input.View()
 	}
 	parts := []string{m.repoName, branch, m.scopeLabel()}
-	if m.status != "" {
+	switch {
+	case m.status != "" && m.acting && m.statusSrc == "action" && strings.HasSuffix(m.status, "…"):
+		parts = append(parts, m.spinning(m.status)) // "pulling…" → "pulling ⠋"
+	case m.status != "":
 		parts = append(parts, m.status)
 	}
 	switch {
 	case m.search.query != "":
 		parts = append(parts, m.searchStatus())
-	case m.loading && !m.loaded:
-		parts = append(parts, "loading…")
+	case m.loading:
+		parts = append(parts, m.spinning("loading…"))
 	case m.loaded && len(m.commits) == 0:
 		parts = append(parts, "no commits")
 	}
@@ -628,7 +649,7 @@ func (m Model) Status() string {
 	}
 	switch {
 	case m.fetching:
-		parts = append(parts, "fetching…")
+		parts = append(parts, m.spinning("fetching…"))
 	case m.fetchErr != "":
 		parts = append(parts, m.fetchErr)
 	}
@@ -647,7 +668,7 @@ func (m Model) View() string {
 	h := m.listHeight()
 	switch {
 	case len(m.rows) == 0:
-		text := "loading…"
+		text := m.spinning("loading…")
 		if m.loaded {
 			text = "no commits"
 		}

@@ -209,7 +209,7 @@ func (m Model) pickerWindow() (floatWin, bool) {
 	var list []string
 	switch {
 	case p.loading:
-		list = append(list, gray.Render(" loading…"))
+		list = append(list, gray.Render(" "+m.spinning("loading…")))
 	case p.err != "":
 		list = append(list, lipgloss.NewStyle().Foreground(lipgloss.Color(colors.Red)).Render(" "+p.err))
 	case len(p.hits) == 0:

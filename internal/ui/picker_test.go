@@ -89,10 +89,10 @@ func TestPickerShowsLoadingAndIcons(t *testing.T) {
 	m := sized(loaded(t, clone), 100, 30)
 	next, cmd := update(m, keyMsg("b"))
 	require.NotNil(t, cmd, "refs load in the background")
-	assert.Contains(t, ansi.Strip(next.View()), "loading…")
+	assert.Contains(t, ansi.Strip(next.View()), "loading ⠋")
 	m = settle(t, next, cmd)
 	view := ansi.Strip(m.View())
-	assert.NotContains(t, view, "loading…")
+	assert.NotContains(t, view, "loading")
 	for _, icon := range []string{iconLocal, iconRemote, iconTag} {
 		assert.Contains(t, view, icon)
 	}

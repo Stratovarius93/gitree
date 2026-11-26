@@ -34,6 +34,8 @@ type detailState struct {
 	key   string // row the panel was opened for (wipKey or hash)
 	shown string // row whose content the viewport currently holds
 	seq   int    // current debounce / load request; older timers are ignored
+	// loading: the viewport holds the placeholder until a load lands.
+	loading bool
 	// data is the loaded content of shown; labels and PRs are composed in at
 	// display time, so their updates need no reload.
 	data *detailLoadedMsg
@@ -85,6 +87,7 @@ func (m *Model) resetDetail() {
 	m.detail.seq++
 	m.detail.vp = viewport.New(m.detailWidth(), m.detailHeight())
 	m.detail.vp.SetContent(" loading…")
+	m.detail.loading = true
 }
 
 // debounceDetail is beginDetail for cursor moves: the row is loaded only if
@@ -145,6 +148,7 @@ func (m Model) onDetail(msg detailLoadedMsg) (tea.Model, tea.Cmd) {
 	if m.mode != ModeDetail || m.Selected() == nil || msg.hash != m.selectedHash() {
 		return m, nil
 	}
+	m.detail.loading = false
 	if msg.err != nil {
 		m.detail.vp.SetContent(" error: " + msg.err.Error())
 		return m, nil
@@ -268,6 +272,9 @@ func (m Model) joinDetail(list []string, listW int) []string {
 	}
 	sep := lipgloss.NewStyle().Foreground(lipgloss.Color(sepColor)).Render("│")
 	panel := strings.Split(m.detail.vp.View(), "\n")
+	if m.detail.loading && len(panel) > 0 {
+		panel[0] = " " + m.spinning("loading…")
+	}
 	n := max(m.height-statusLines, 0) // like the list, nothing fits on a 1-line terminal
 	out := make([]string, 0, n)
 	for i := 0; i < n; i++ {

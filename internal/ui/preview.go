@@ -338,12 +338,15 @@ func (m Model) previewBody(iw, ih int) (body []string, sel int) {
 
 	if m.mode == ModePreviewDiff {
 		body = append(body, strings.Split(p.vp.View(), "\n")...)
+		if p.diffLoading && len(body) > 0 {
+			body[0] = " " + m.spinning("loading…")
+		}
 	} else {
 		body = append(body, m.previewHeader(iw)...)
 		listRows := m.previewListRows()
 		switch {
 		case p.loading:
-			body = append(body, gray.Render(" loading…"))
+			body = append(body, gray.Render(" "+m.spinning("loading…")))
 		case p.err != "":
 			body = append(body, " error: "+p.err)
 		case len(p.files) == 0:

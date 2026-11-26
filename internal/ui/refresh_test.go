@@ -24,7 +24,7 @@ func TestFetchKey(t *testing.T) {
 	m := loaded(t, r)
 
 	m, cmd := update(m, keyMsg("f"))
-	assert.Contains(t, m.Status(), "fetching…")
+	assert.Contains(t, m.Status(), "fetching ⠋")
 	require.NotNil(t, cmd)
 
 	at := time.Date(2026, 1, 2, 14, 5, 0, 0, time.UTC)
@@ -62,7 +62,7 @@ func TestAutoFetchTick(t *testing.T) {
 
 	m, cmd := update(m, autoFetchTickMsg{})
 	require.NotNil(t, cmd)
-	assert.Contains(t, m.Status(), "fetching…")
+	assert.Contains(t, m.Status(), "fetching ⠋")
 	assert.True(t, m.fetching)
 	// the batch holds the fetch and the next tick (tea.Tick would block, so
 	// only check the batch size)

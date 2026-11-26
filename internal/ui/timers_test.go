@@ -116,14 +116,14 @@ func TestTransientStatusExpires(t *testing.T) {
 	assert.Empty(t, m.status)
 }
 
-// TestFetchHasItsOwnSegment: a copy during a fetch does not hide "fetching…".
+// TestFetchHasItsOwnSegment: a copy during a fetch does not hide "fetching ⠋".
 func TestFetchHasItsOwnSegment(t *testing.T) {
 	r := testutil.NewRepo(t)
 	r.Commit("one", map[string]string{"a.txt": "a"})
 	m := loaded(t, r)
 	m, _ = update(m, keyMsg("f"))
 	m, _ = update(m, keyMsg("y"))
-	assert.Contains(t, m.Status(), "fetching…")
+	assert.Contains(t, m.Status(), "fetching ⠋")
 	assert.Contains(t, m.Status(), statusCopied)
 }
 
