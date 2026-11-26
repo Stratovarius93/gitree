@@ -157,11 +157,15 @@ func prChip(pr *github.PR, text string, hex string) string {
 // then its PR chip, then " +N" when more labels exist; the rest is blank
 // padding. The result is exactly width cells, truncating with "…".
 func RenderLabels(labels []Label, laneHex string, width int) string {
-	if width <= 0 {
-		return ""
-	}
-	if len(labels) == 0 {
-		return strings.Repeat(" ", width)
+	s, _ := renderLabelContent(labels, laneHex, width)
+	return fit(s, width)
+}
+
+// renderLabelContent is RenderLabels without the padding: the content and
+// how many cells it uses (at most width).
+func renderLabelContent(labels []Label, laneHex string, width int) (string, int) {
+	if width <= 0 || len(labels) == 0 {
+		return "", 0
 	}
 	l := labels[0]
 	bg, fg := laneHex, colors.DarkText
@@ -198,7 +202,7 @@ func RenderLabels(labels []Label, laneHex string, width int) string {
 	if suffix != "" {
 		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(colors.Gray)).Render(suffix))
 	}
-	return fit(b.String(), width)
+	return b.String(), min(lipgloss.Width(b.String()), width)
 }
 
 // NaturalLabelWidth is the width RenderLabels needs to show a row's labels

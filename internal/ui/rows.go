@@ -188,16 +188,40 @@ func RenderRow(r Row, w Widths, selected bool, now time.Time) string {
 		}
 		hash = text(short, w.Hash, colors.Gray)
 	}
+	// The lane tint runs from the node to the end of the graph column and on
+	// to a strong lane bar before the message (see tint.go).
+	node := 2 * r.Lane
+	tint := colors.Mix(hex, colors.Background, tintAlpha(selected))
+	tinted := w.Graph > 0 && node < w.Graph
+	head := len(r.Labels) > 0 && r.Labels[0].IsHead && w.Label > 0 && w.Graph > 0
+	if head {
+		label = connectLabel(r.Labels, hex, w.Label)
+		gph = connectGraph(gph, min(node, w.Graph), hex)
+	}
+	if tinted {
+		gph = tintGraph(gph, node, w.Graph, tint)
+	}
 	if selected {
 		label, gph = withBg(label, colors.DimBg), withBg(gph, colors.DimBg)
 	}
 	byKey := map[string]string{"label": label, "graph": gph, "message": msg, "author": author, "date": date, "hash": hash}
 	sep := base.Foreground(lipgloss.Color(colors.Separator)).Render(" ┊ ")
-	var parts []string
-	for _, c := range w.cells() {
-		parts = append(parts, byKey[c.key])
+	var b strings.Builder
+	cells := w.cells()
+	for i, c := range cells {
+		if i > 0 {
+			switch {
+			case cells[i-1].key == "label" && c.key == "graph" && head:
+				b.WriteString(base.Foreground(lipgloss.Color(hex)).Render("━━━"))
+			case cells[i-1].key == "graph" && tinted:
+				b.WriteString(laneBar(base, hex, tint))
+			default:
+				b.WriteString(sep)
+			}
+		}
+		b.WriteString(byKey[c.key])
 	}
-	return strings.Join(parts, sep)
+	return b.String()
 }
 
 // withBg gives s a background that survives the resets inside it: the

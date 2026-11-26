@@ -107,7 +107,9 @@ func TestSelectedRowBackgroundHasNoHoles(t *testing.T) {
 					continue
 				}
 				end := strings.Index(rest, "m")
-				assert.True(t, strings.HasPrefix(rest, "\x1b[") && strings.Contains(rest[:end+1], "48;2;60;56;54"),
+				// A background follows every reset: the highlight, or the lane
+				// tint (tint.go) where it is drawn on purpose.
+				assert.True(t, strings.HasPrefix(rest, "\x1b[") && strings.Contains(rest[:end+1], "48;2;"),
 					"total %d row %d: reset followed by %q", total, i, rest[:min(len(rest), 20)])
 			}
 			assert.True(t, strings.HasPrefix(out, "\x1b["), "row starts with an escape")
