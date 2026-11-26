@@ -2,6 +2,9 @@
 package colors
 
 import (
+	"fmt"
+	"math"
+	"strconv"
 	"sync"
 
 	"github.com/Stratovarius93/gitree/internal/graph"
@@ -52,4 +55,38 @@ func ForColumn(col int) *graph.Style {
 		styles[i] = graph.NewStyle(Palette[i])
 	}
 	return styles[i]
+}
+
+// Background is the terminal background the theme assumes (Gruvbox bg0).
+const Background = "#282828"
+
+// Mix blends fg into bg with weight a (0: bg, 1: fg), per RGB channel,
+// rounding to the nearest value. Malformed colors yield bg.
+func Mix(fg, bg string, a float64) string {
+	f, okF := parseHex(fg)
+	b, okB := parseHex(bg)
+	if !okF || !okB {
+		return bg
+	}
+	out := "#"
+	for i := range 3 {
+		v := float64(f[i])*a + float64(b[i])*(1-a)
+		out += fmt.Sprintf("%02x", int(math.Round(v)))
+	}
+	return out
+}
+
+func parseHex(s string) ([3]uint8, bool) {
+	var c [3]uint8
+	if len(s) != 7 || s[0] != '#' {
+		return c, false
+	}
+	for i := range 3 {
+		v, err := strconv.ParseUint(s[1+2*i:3+2*i], 16, 8)
+		if err != nil {
+			return c, false
+		}
+		c[i] = uint8(v)
+	}
+	return c, true
 }
