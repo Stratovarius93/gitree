@@ -49,6 +49,7 @@ func (m Model) autoFetchTick() tea.Cmd {
 // it so only that source's next success clears it (src "" is never cleared).
 func (m *Model) setStatus(src, text string) {
 	m.status, m.statusSrc = oneLine(text), src
+	m.statusOK = false
 	m.statusSeq++
 }
 
@@ -56,6 +57,7 @@ func (m *Model) setStatus(src, text string) {
 // itself after statusTTL unless another message replaced it.
 func (m *Model) flash(src, text string) tea.Cmd {
 	m.setStatus(src, text)
+	m.statusOK = true
 	return after(statusTTL, statusExpireMsg{seq: m.statusSeq})
 }
 

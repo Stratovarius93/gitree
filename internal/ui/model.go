@@ -151,6 +151,9 @@ type Model struct {
 	spinOn    bool          // animate it (see EnableSpinner)
 	animating bool          // a spinner tick chain is running
 
+	version  string // shown at the right of the status bar ("" = dev)
+	statusOK bool   // status is a confirmation (set by flash)
+
 	polling     bool   // follow outside changes (see EnablePolling)
 	fingerprint string // refs fingerprint of the last full log load
 }
@@ -712,10 +715,13 @@ func (m Model) View() string {
 		lines = m.joinDetail(lines, lw)
 	}
 	lines = m.overlayFloat(lines)
-	bar := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(colors.Fg)).
-		Background(lipgloss.Color(colors.DimBg)).
-		Width(m.width).
-		Render(ansi.Truncate(m.Status(), m.width, "…"))
+	bar := m.statusBar()
+	if m.mode == ModeSearch { // the query being typed
+		bar = lipgloss.NewStyle().
+			Foreground(lipgloss.Color(colors.Fg)).
+			Background(lipgloss.Color(colors.DimBg)).
+			Width(m.width).
+			Render(ansi.Truncate(m.Status(), m.width, "…"))
+	}
 	return strings.Join(append(lines, bar), "\n")
 }
