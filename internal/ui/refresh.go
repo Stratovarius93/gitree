@@ -135,7 +135,9 @@ func (m Model) onFetchDone(msg fetchDoneMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	m.lastFetch, m.fetchErr = msg.at, ""
-	return m, tea.Batch(m.reloadAll(), m.loadPRs())
+	// Reload only if the fetch changed refs (onFingerprint decides): with a
+	// fetch every minute, a full reload each time would be wasted work.
+	return m, tea.Batch(m.checkRefs(), m.loadPRs())
 }
 
 // onAutoFetchTick fetches and schedules the next tick. While lazygit has the

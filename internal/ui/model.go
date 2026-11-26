@@ -64,6 +64,7 @@ type (
 		fp string
 	}
 	wipLoadedMsg struct {
+		poll  bool // from a poll or focus check, not a load or reload
 		files []git.FileChange
 		err   error
 	}
@@ -304,8 +305,16 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if slices.Equal(msg.files, m.wip) {
 			return m, nil // a poll found nothing new: no rebuild, no flicker
 		}
+		if msg.poll && m.loaded {
+			// The WIP row appearing must not pull the cursor to row 0.
+			m.userMoved = true
+		}
 		m.wip = msg.files
 		m.rebuild()
+		if msg.poll && m.selectedKey() == wipKey {
+			// No log reload follows a poll: refresh an open WIP panel now.
+			return m, m.refreshPanels()
+		}
 		return m, m.syncPanels()
 	case trackLoadedMsg:
 		if msg.err != nil {

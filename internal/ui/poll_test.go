@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Stratovarius93/gitree/internal/testutil"
 	tea "github.com/charmbracelet/bubbletea"
@@ -141,4 +142,63 @@ func TestFocusChecksRefs(t *testing.T) {
 	m, cmd := update(m, tea.FocusMsg{})
 	m = settle(t, m, cmd)
 	assert.Equal(t, "made elsewhere", m.commits[0].Subject)
+}
+
+func TestRefsPollWorksInUnbornRepo(t *testing.T) {
+	r := testutil.NewRepo(t)
+	m := loaded(t, r)
+
+	r.Commit("first", map[string]string{"a.txt": "a"})
+	m, cmd := update(m, refsPollTickMsg{})
+	m = settle(t, m, cmd)
+	require.NotEmpty(t, m.commits, "the first commit shows up")
+	assert.Equal(t, "first", m.commits[0].Subject)
+}
+
+func TestWIPPollRefreshesOpenWIPPreview(t *testing.T) {
+	r := testutil.NewRepo(t)
+	r.Commit("first", map[string]string{"a.txt": "a", "b.txt": "b"})
+	require.NoError(t, os.WriteFile(filepath.Join(r.Dir, "a.txt"), []byte("edited"), 0o644))
+	m := loaded(t, r)
+	require.Equal(t, RowWIP, m.rows[m.cursor].Kind)
+	m = press(t, m, " ")
+	require.Equal(t, ModePreviewFiles, m.mode)
+	require.Len(t, m.preview.files, 1)
+
+	require.NoError(t, os.WriteFile(filepath.Join(r.Dir, "b.txt"), []byte("edited"), 0o644))
+	m, cmd := update(m, wipPollTickMsg{})
+	m = settle(t, m, cmd)
+	assert.Len(t, m.preview.files, 2, "the open preview follows the working tree")
+}
+
+func TestWIPPollKeepsCursorAndDetail(t *testing.T) {
+	r := testutil.NewRepo(t)
+	head := r.Commit("first", map[string]string{"a.txt": "a"})
+	m := loaded(t, r)
+	m = press(t, m, "enter")
+	require.Equal(t, ModeDetail, m.mode)
+	require.Equal(t, head, m.selectedHash())
+
+	require.NoError(t, os.WriteFile(filepath.Join(r.Dir, "a.txt"), []byte("edited"), 0o644))
+	m, cmd := update(m, wipPollTickMsg{})
+	m = settle(t, m, cmd)
+	require.Equal(t, RowWIP, m.rows[0].Kind)
+	assert.Equal(t, head, m.selectedHash(), "the WIP row appearing does not steal the cursor")
+	assert.Equal(t, head, m.detail.key)
+}
+
+func TestFetchReloadsOnlyWhenRefsChanged(t *testing.T) {
+	r := testutil.NewRepo(t)
+	r.Commit("first", map[string]string{"a.txt": "a"})
+	m := loaded(t, r)
+	gen := m.gen
+
+	m, cmd := update(m, fetchDoneMsg{at: time.Now()})
+	m = settle(t, m, cmd)
+	assert.Equal(t, gen, m.gen, "a fetch that brought nothing does not reload")
+
+	r.Commit("second", map[string]string{"b.txt": "b"})
+	m, cmd = update(m, fetchDoneMsg{at: time.Now()})
+	m = settle(t, m, cmd)
+	assert.Greater(t, m.gen, gen)
 }

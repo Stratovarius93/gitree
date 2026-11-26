@@ -71,7 +71,7 @@ func (m Model) onWIPPollTick() (tea.Model, tea.Cmd) {
 	if m.pollPaused() {
 		return m, m.wipPollTick()
 	}
-	return m, tea.Batch(m.loadWIP(), m.wipPollTick())
+	return m, tea.Batch(m.pollWIP(), m.wipPollTick())
 }
 
 // onFocus checks right away when the terminal window gets focus back.
@@ -79,7 +79,18 @@ func (m Model) onFocus() (tea.Model, tea.Cmd) {
 	if m.pollPaused() {
 		return m, nil
 	}
-	return m, tea.Batch(m.checkRefs(), m.loadWIP())
+	return m, tea.Batch(m.checkRefs(), m.pollWIP())
+}
+
+// pollWIP is loadWIP marked as a poll: its result keeps the selection and
+// refreshes an open WIP panel (see the wipLoadedMsg case in update).
+func (m Model) pollWIP() tea.Cmd {
+	load := m.loadWIP()
+	return func() tea.Msg {
+		msg := load().(wipLoadedMsg)
+		msg.poll = true
+		return msg
+	}
 }
 
 // onFingerprint reloads when the refs changed since the last full log load
@@ -87,7 +98,9 @@ func (m Model) onFocus() (tea.Model, tea.Cmd) {
 // A failed check is ignored: git may be busy (a lock held elsewhere) and the
 // next tick tries again.
 func (m Model) onFingerprint(msg fingerprintMsg) (tea.Model, tea.Cmd) {
-	if msg.err != nil || m.pollPaused() || m.fingerprint == "" || msg.fp == m.fingerprint {
+	// An unknown fingerprint ("": the last load could not take one) counts
+	// as changed, so a failed check at load time does not stop polling.
+	if msg.err != nil || m.pollPaused() || msg.fp == m.fingerprint {
 		return m, nil
 	}
 	return m, m.reloadAll()

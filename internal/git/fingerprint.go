@@ -15,5 +15,7 @@ func (r *Repo) Fingerprint() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return head + refs, nil
+	// Never empty, even in a repo without commits ("" means "unknown" to
+	// callers).
+	return "HEAD " + head + "\n" + refs, nil
 }

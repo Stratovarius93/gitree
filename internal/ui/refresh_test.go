@@ -31,11 +31,10 @@ func TestFetchKey(t *testing.T) {
 	m, cmd = update(m, fetchDoneMsg{at: at})
 	assert.Contains(t, m.Status(), "last fetch 14:05")
 	assert.NotContains(t, m.Status(), "fetching")
-	require.NotNil(t, cmd, "a successful fetch reloads")
-	gen := m.gen
-	assert.True(t, m.loading)
+	require.NotNil(t, cmd, "a successful fetch checks the refs")
+	r.Commit("second", map[string]string{"b.txt": "b"}) // as if the fetch moved a ref
 	m = settle(t, m, cmd)
-	assert.Greater(t, gen, 1)
+	assert.Greater(t, m.gen, 1, "changed refs reload")
 	assert.Contains(t, m.Status(), "last fetch 14:05", "the reload keeps the last-fetch time")
 }
 
