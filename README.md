@@ -47,6 +47,21 @@ gitree [path]
 - [`lazygit`](https://github.com/jesseduffield/lazygit): opened with `L`.
 - A [Nerd Font](https://www.nerdfonts.com/) in your terminal, for the icons.
 
+## Live updates
+
+gitree follows the repository on its own, so commits, checkouts, new branches,
+tags or stashes made in another terminal or your editor show up without
+restarting:
+
+- branches, tags, HEAD and the stash are checked every 2 seconds (a cheap
+  check; the log only reloads when something changed);
+- the working tree (the `// WIP` row) is checked every 10 seconds;
+- both are checked right away when the terminal window gets focus back;
+- the remote is fetched every minute.
+
+A spinner (`⠋`) in the status bar shows while gitree is loading, fetching,
+pulling, pushing or checking out. `r` still forces a full reload.
+
 ## Keys
 
 The in-app help (`?`) shows the same table.

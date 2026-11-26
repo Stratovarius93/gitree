@@ -128,6 +128,7 @@ func (m Model) askCheckoutStash(plan checkoutPlan) (Model, tea.Cmd) {
 func (m *Model) actCheckout(plan checkoutPlan, stash bool) tea.Cmd {
 	m.acting = true
 	m.actSeq++
+	m.setStatus("action", "checking out…")
 	repo := m.repo
 	return func() tea.Msg {
 		msg := actionDoneMsg{op: "checkout", plan: &plan}

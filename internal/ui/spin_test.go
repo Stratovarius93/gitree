@@ -3,6 +3,7 @@ package ui
 import (
 	"testing"
 
+	"github.com/Stratovarius93/gitree/internal/git"
 	"github.com/Stratovarius93/gitree/internal/testutil"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -93,4 +94,28 @@ func TestPanelPlaceholderSpins(t *testing.T) {
 	require.Equal(t, ModeDetail, m.mode)
 	assert.Contains(t, ansi.Strip(m.View()), "loading ⠋")
 	var _ tea.Model = m
+}
+
+func TestStatusShowsSpinnerWhileCheckingOut(t *testing.T) {
+	r, _ := mergeRepo(t)
+	m := loaded(t, r)
+	m = selectWhere(t, m, hasLabel("feature/login"))
+	m = press(t, m, "c")
+	require.Equal(t, ModeConfirm, m.mode)
+
+	m, cmd := update(m, keyMsg("y"))
+	assert.Contains(t, m.Status(), "checking out ⠋")
+	m = settle(t, m, cmd)
+	assert.NotContains(t, m.Status(), "checking out")
+}
+
+func TestCheckingOutStatusClearedWhenRefused(t *testing.T) {
+	r := testutil.NewRepo(t)
+	r.Commit("first", map[string]string{"a.txt": "a"})
+	m := loaded(t, r)
+	m.acting = true
+	m.setStatus("action", "checking out…")
+
+	m, _ = update(m, actionDoneMsg{op: "checkout", err: git.ErrDirty})
+	assert.NotContains(t, m.Status(), "checking out")
 }
