@@ -19,6 +19,36 @@ request status, author and date, all in one keyboard-driven view.
 
 ![Diff preview of a changed file](docs/screenshots/diff-preview.png)
 
+## Why gitree?
+
+Terminal git tools are great at *doing* things — staging, committing,
+rebasing. gitree is built for *seeing*: one full-screen table that answers
+"where is everything?" the way GitKraken does, without leaving the terminal.
+
+- **The graph is the main view, not a side panel.** Every branch gets its own
+  colored lane, each row is tinted with its lane color, and the branch you are
+  on is joined to its commit by a line, so you find it at a glance.
+- **Branches, tags and pull requests live in their own column.** Labels don't
+  crowd the commit message: local and remote branches are merged into one
+  pill, ahead/behind counts sit next to the name, and the PR state (open,
+  draft, approved, changes requested, merged) shows as an icon, through `gh`.
+- **It follows the repo on its own.** Commits, checkouts and branches made in
+  another terminal or your editor appear within seconds, and the remote is
+  fetched every minute. No need to restart or press refresh.
+- **Safe by default.** Pull is fast-forward only, push never forces, a branch
+  is only pushed to a branch of the same name, and every action asks first.
+  When something can't run, a dialog says why and what you can do instead.
+- **Plays well with lazygit.** gitree doesn't try to replace a full git
+  client: press `L` to open lazygit in the same repo for staging, committing
+  or resolving conflicts, and gitree reloads when you come back.
+
+| | gitree | lazygit | tig | GitKraken |
+| --- | --- | --- | --- | --- |
+| Runs in the terminal | ✓ | ✓ | ✓ | — |
+| Full-screen commit graph as the main view | ✓ | — | ✓ | ✓ |
+| Branch/tag column beside the graph | ✓ | — | — | ✓ |
+| Staging, committing, rebasing | via lazygit | ✓ | ✓ | ✓ |
+| Free and open source | ✓ | ✓ | ✓ | — |
 
 ## Install
 
