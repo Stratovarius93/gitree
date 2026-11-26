@@ -25,10 +25,12 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      # Always the config from main: an older tag (built by hand) may predate it.
+      - run: git show origin/main:.goreleaser.yaml > "$RUNNER_TEMP/goreleaser.yaml"
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean --config ${{ runner.temp }}/goreleaser.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
