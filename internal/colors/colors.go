@@ -21,6 +21,7 @@ const (
 	Fg        = "#d4be98"
 	Gray      = "#928374"
 	DimBg     = "#3c3836"
+	SelBg     = "#504945" // selected row: stands out over the lane tint
 	Separator = "#504945"
 	DarkText  = "#282828"
 )

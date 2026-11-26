@@ -10,6 +10,7 @@ import (
 	"github.com/Stratovarius93/gitree/internal/github"
 	"github.com/Stratovarius93/gitree/internal/graph"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // RowKind distinguishes the WIP pseudo-row from commit rows.
@@ -168,10 +169,14 @@ func RenderRow(r Row, w Widths, selected bool, now time.Time) string {
 	head := len(r.Labels) > 0 && r.Labels[0].IsHead && w.Label > 0 && tinted
 	base := lipgloss.NewStyle()
 	if selected {
-		base = base.Background(lipgloss.Color(colors.DimBg))
+		base = base.Background(lipgloss.Color(colors.SelBg))
 	}
 	text := func(s string, width int, fg string) string {
 		return base.Foreground(lipgloss.Color(fg)).Render(fit(s, width))
+	}
+	msgFg, msgStyle := colors.Fg, base
+	if selected {
+		msgFg, msgStyle = colors.FgFloat, base.Bold(true)
 	}
 
 	var label, gph, msg, author, date, hash string
@@ -179,7 +184,7 @@ func RenderRow(r Row, w Widths, selected bool, now time.Time) string {
 	case RowWIP:
 		label = RenderLabels([]Label{{Name: "// WIP", Kind: LabelBranch}}, hex, w.Label)
 		gph = fit(base.Foreground(lipgloss.Color(hex)).Render(strings.Repeat("  ", r.Lane)+"◌"), w.Graph)
-		msg = text(wipMessage(r.WIPCount), w.Message, colors.Fg)
+		msg = msgStyle.Foreground(lipgloss.Color(msgFg)).Render(fit(wipMessage(r.WIPCount), w.Message))
 		author, date, hash = text("", w.Author, colors.Gray), text("", w.Date, colors.Gray), text("", w.Hash, colors.Gray)
 	default:
 		c := r.Commit
@@ -189,7 +194,7 @@ func RenderRow(r Row, w Widths, selected bool, now time.Time) string {
 			label = RenderLabels(r.Labels, hex, w.Label)
 		}
 		gph = fit(r.Graph, w.Graph)
-		msg = text(c.Subject, w.Message, colors.Fg)
+		msg = msgStyle.Foreground(lipgloss.Color(msgFg)).Render(fit(c.Subject, w.Message))
 		author = text(authorName(c.AuthorName), w.Author, colors.Fg)
 		date = text(RelativeTime(c.Time, now), w.Date, colors.Gray)
 		short := c.Hash
@@ -206,7 +211,7 @@ func RenderRow(r Row, w Widths, selected bool, now time.Time) string {
 		gph = tintGraph(gph, node, w.Graph, tint)
 	}
 	if selected {
-		label, gph = withBg(label, colors.DimBg), withBg(gph, colors.DimBg)
+		label, gph = withBg(label, colors.SelBg), withBg(gph, colors.SelBg)
 	}
 	byKey := map[string]string{"label": label, "graph": gph, "message": msg, "author": author, "date": date, "hash": hash}
 	sep := base.Foreground(lipgloss.Color(colors.Separator)).Render(" ┊ ")
@@ -225,7 +230,13 @@ func RenderRow(r Row, w Widths, selected bool, now time.Time) string {
 		}
 		b.WriteString(byKey[c.key])
 	}
-	return b.String()
+	out := b.String()
+	if selected && w.sum() > 1 {
+		// A marker in the first cell finds the selected row at a glance.
+		marker := base.Foreground(lipgloss.Color(colors.Aqua)).Render("▌")
+		out = marker + ansi.TruncateLeft(out, 1, "")
+	}
+	return out
 }
 
 // withBg gives s a background that survives the resets inside it: the

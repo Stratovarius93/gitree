@@ -123,7 +123,7 @@ func TestSelectedRowTintStronger(t *testing.T) {
 	node := graphStart(w) + 2*r.Lane
 	assert.Equal(t, tint, cells[node].bg)
 	msg := graphStart(w) + w.Graph + sepWidth
-	assert.Equal(t, fgOf(colors.DimBg), cells[msg].bg, "the rest of the row keeps the highlight")
+	assert.Equal(t, fgOf(colors.SelBg), cells[msg].bg, "the rest of the row keeps the highlight")
 }
 
 func TestWIPRowTinted(t *testing.T) {
@@ -251,4 +251,21 @@ func TestConnectorLeavesSpaceAfterSuffix(t *testing.T) {
 func TestMixClamps(t *testing.T) {
 	assert.Equal(t, "#ffffff", colors.Mix("#ffffff", "#000000", 2))
 	assert.Equal(t, "#000000", colors.Mix("#ffffff", "#000000", -1))
+}
+
+func TestSelectedRowStandsOut(t *testing.T) {
+	r := tintRows()[1]
+	w := ComputeWidths(160, 6, 0, 18)
+	out := RenderRow(r, w, true, testNow)
+	cells := cellsOf(out)
+	assert.Equal(t, w.sum(), len(cells), "the marker does not change the width")
+	assert.Equal(t, "▌", cells[0].ch)
+	assert.Equal(t, fgOf(colors.Aqua), cells[0].fg)
+	msg := graphStart(w) + w.Graph + sepWidth
+	assert.Equal(t, fgOf(colors.SelBg), cells[msg].bg)
+	assert.Equal(t, fgOf(colors.FgFloat), cells[msg].fg)
+	assert.Contains(t, out, "\x1b[1;", "the message is bold")
+
+	plain := cellsOf(RenderRow(r, w, false, testNow))
+	assert.NotEqual(t, "▌", plain[0].ch)
 }
