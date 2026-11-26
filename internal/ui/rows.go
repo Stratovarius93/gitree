@@ -234,7 +234,8 @@ func RenderRow(r Row, w Widths, selected bool, now time.Time) string {
 	if selected && w.sum() > 1 {
 		// A marker in the first cell finds the selected row at a glance.
 		marker := base.Foreground(lipgloss.Color(colors.Aqua)).Render("▌")
-		out = marker + ansi.TruncateLeft(out, 1, "")
+		// fit: a double-width first cell is not cut in half by TruncateLeft.
+		out = fit(marker+ansi.TruncateLeft(out, 1, ""), w.sum())
 	}
 	return out
 }

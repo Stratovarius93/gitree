@@ -151,8 +151,9 @@ type Model struct {
 	spinOn    bool          // animate it (see EnableSpinner)
 	animating bool          // a spinner tick chain is running
 
-	version  string // shown at the right of the status bar ("" = dev)
-	statusOK bool   // status is a confirmation (set by flash)
+	version    string // shown at the right of the status bar ("" = dev)
+	statusOK   bool   // status is a confirmation (set by flash)
+	statusWarn bool   // status is a warning (set by flashWarn)
 
 	polling     bool   // follow outside changes (see EnablePolling)
 	fingerprint string // refs fingerprint of the last full log load

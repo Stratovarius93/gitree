@@ -269,3 +269,12 @@ func TestSelectedRowStandsOut(t *testing.T) {
 	plain := cellsOf(RenderRow(r, w, false, testNow))
 	assert.NotEqual(t, "▌", plain[0].ch)
 }
+
+func TestSelectedRowWideFirstCellKeepsWidth(t *testing.T) {
+	r := tintRows()[1]
+	r.Commit.Subject = "日本語のメッセージ"
+	for _, total := range []int{3, 5, 8, 25} {
+		w := ComputeWidths(total, 6, 0, 18)
+		assert.Equal(t, w.sum(), lipgloss.Width(RenderRow(r, w, true, testNow)), "total %d", total)
+	}
+}

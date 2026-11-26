@@ -325,7 +325,7 @@ func (m *Model) continueJump() (cmd tea.Cmd, done bool) {
 	if m.more {
 		text += " in the first " + strconv.Itoa(len(m.commits)) + " commits"
 	}
-	return m.flash("jump", text), false
+	return m.flashWarn("jump", text), false
 }
 
 // jumpToAll switches to all branches and reloads; the jump continues there.

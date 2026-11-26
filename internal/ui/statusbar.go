@@ -86,8 +86,12 @@ func powerRight(segs []barSeg) string {
 	return b.String()
 }
 
-// barItem is one colored text in the middle of the bar.
-type barItem struct{ text, fg string }
+// barItem is one colored text in the middle of the bar; busy items (spinners)
+// come and go on their own and do not reserve room.
+type barItem struct {
+	text, fg string
+	busy     bool
+}
 
 // statusItem is the status message with the icon and color of its kind.
 func (m Model) statusItem() (barItem, bool) {
@@ -96,17 +100,17 @@ func (m Model) statusItem() (barItem, bool) {
 	case t == "":
 		return barItem{}, false
 	case strings.HasPrefix(t, "error"):
-		return barItem{iconError + " " + t, colors.Red}, true
-	case warnFlashes[t]:
-		return barItem{iconWarn + " " + t, colors.Yellow}, true
-	case strings.HasSuffix(t, "…"):
-		return barItem{m.spinning(t), colors.Orange}, true
+		return barItem{text: iconError + " " + t, fg: colors.Red}, true
+	case warnFlashes[t] || m.statusWarn:
+		return barItem{text: iconWarn + " " + t, fg: colors.Yellow}, true
+	case m.acting && m.statusSrc == "action" && strings.HasSuffix(t, "…"):
+		return barItem{text: m.spinning(t), fg: colors.Orange, busy: true}, true
 	case m.statusOK:
-		return barItem{iconOK + " " + t, colors.Green}, true
+		return barItem{text: iconOK + " " + t, fg: colors.Green}, true
 	case m.statusSrc == "jump":
-		return barItem{iconInfo + " " + t, colors.Blue}, true
+		return barItem{text: iconInfo + " " + t, fg: colors.Blue}, true
 	default:
-		return barItem{iconWarn + " " + t, colors.Yellow}, true
+		return barItem{text: iconWarn + " " + t, fg: colors.Yellow}, true
 	}
 }
 
@@ -117,29 +121,30 @@ func (m Model) barItems() []barItem {
 	}
 	switch {
 	case m.search.query != "":
-		items = append(items, barItem{iconSearch + " " + m.searchStatus(), colors.Blue})
+		items = append(items, barItem{text: iconSearch + " " + m.searchStatus(), fg: colors.Blue})
 	case m.loading:
-		items = append(items, barItem{m.spinning("loading…"), colors.Orange})
+		items = append(items, barItem{text: m.spinning("loading…"), fg: colors.Orange, busy: true})
 	case m.loaded && len(m.commits) == 0:
-		items = append(items, barItem{"no commits", colors.Gray})
+		items = append(items, barItem{text: "no commits", fg: colors.Gray})
 	}
 	if m.prNote != "" {
-		items = append(items, barItem{iconPR + " " + m.prNote, colors.Gray})
+		items = append(items, barItem{text: iconPR + " " + m.prNote, fg: colors.Gray})
 	}
 	switch {
 	case m.fetching:
-		items = append(items, barItem{m.spinning("fetching…"), colors.Orange})
+		items = append(items, barItem{text: m.spinning("fetching…"), fg: colors.Orange, busy: true})
 	case m.fetchErr != "":
-		items = append(items, barItem{iconError + " " + m.fetchErr, colors.Red})
+		items = append(items, barItem{text: iconError + " " + m.fetchErr, fg: colors.Red})
 	}
 	return items
 }
 
-func (m Model) branchSeg() barSeg {
+// branchSeg is the branch segment with its name capped at maxText cells.
+func (m Model) branchSeg(maxText int) barSeg {
 	if m.branch == "" {
 		return barSeg{" " + iconBranch + " detached HEAD ", colors.DarkText, colors.Orange, true}
 	}
-	text := ansi.Truncate(m.branch, maxBranchText, "…")
+	text := ansi.Truncate(noNewlines.Replace(m.branch), max(maxText, 1), "…")
 	if t, ok := m.track[m.branch]; ok {
 		if t.Ahead > 0 {
 			text += " ↑" + strconv.Itoa(t.Ahead)
@@ -165,7 +170,7 @@ func (m Model) scopeSeg() barSeg {
 // segments are dropped, in that order, until a message has minMessageRoom
 // cells; the middle is then truncated.
 func (m Model) statusBar() string {
-	repo := barSeg{" " + iconRepo + " " + m.repoName + " ", colors.DarkText, colors.Aqua, true}
+	repo := barSeg{" " + iconRepo + " " + oneLine(m.repoName) + " ", colors.DarkText, colors.Aqua, true}
 	version := m.version
 	if version == "" {
 		version = "dev"
@@ -176,27 +181,40 @@ func (m Model) statusBar() string {
 		fetch = &barSeg{" " + iconFetch + " fetched " + m.lastFetch.Format("15:04") + " ", colors.Fg, colors.SelBg, false}
 	}
 	scope := m.scopeSeg()
+	branch := m.branchSeg(maxBranchText)
 	layouts := [][2][]barSeg{
-		{{repo, m.branchSeg(), scope}, {ver}},
-		{{repo, m.branchSeg()}, {ver}},
-		{{repo, m.branchSeg()}, nil},
-		{{repo}, nil},
+		{{repo, branch, scope}, {ver}},
+		{{repo, branch}, {ver}},
+		{{repo, branch}, nil},
 	}
 	if fetch != nil {
-		layouts = append([][2][]barSeg{{{repo, m.branchSeg(), scope}, {*fetch, ver}}}, layouts...)
+		layouts = append([][2][]barSeg{{{repo, branch, scope}, {*fetch, ver}}}, layouts...)
 	}
 	items := m.barItems()
 	minMid := 0
-	if len(items) > 0 {
-		minMid = minMessageRoom // optional segments give way to a message
+	for _, it := range items {
+		if !it.busy {
+			minMid = minMessageRoom // optional segments give way to a message
+		}
 	}
 	var left, right string
-	for i, l := range layouts {
+	fits := false
+	for _, l := range layouts {
 		left, right = powerLeft(l[0]), powerRight(l[1])
-		need := lipgloss.Width(left) + lipgloss.Width(right)
-		if i == len(layouts)-1 || need+minMid <= m.width {
+		if lipgloss.Width(left)+lipgloss.Width(right)+minMid <= m.width {
+			fits = true
 			break
 		}
+	}
+	if !fits {
+		// The branch is never dropped: its name shrinks to what is left
+		// (a one-cell name "…" measures the segment's fixed overhead).
+		overhead := lipgloss.Width(powerLeft([]barSeg{repo, m.branchSeg(1)})) - 1
+		room := m.width - minMid - overhead
+		if room < 1 {
+			room = m.width - overhead // too narrow to keep room for the message
+		}
+		left, right = powerLeft([]barSeg{repo, m.branchSeg(min(room, maxBranchText))}), ""
 	}
 	avail := m.width - lipgloss.Width(left) - lipgloss.Width(right)
 	if avail < 0 {

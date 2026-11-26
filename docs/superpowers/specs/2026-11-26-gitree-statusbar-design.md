@@ -26,7 +26,7 @@ background `#3c3836`:
 Middle (bar background, colored text), joined by two spaces:
 
 - the status message: red `` for `error:`; orange spinner while in
-  progress (text ending in `…` while acting, jumps, fetch); green `` for
+  progress (an action's text ending in `…`, loading, fetch); green `` for
   confirmations (`flash`); yellow `` for warnings (other `setStatus` texts
   and the known warning flashes: busy, no lazygit, no checkout, no PR);
 - search results ` 2/5`, PR note gray ``, fetch error red ``.
@@ -34,8 +34,9 @@ Middle (bar background, colored text), joined by two spaces:
 Right, joined by ``: last fetch ` 10:25` on `#504945`, then the version
 ` v0.4.0` on purple (`dev` for local builds).
 
-When the width is short: the middle is truncated first (with `…`), then the
-fetch segment, then the scope, then the version are dropped. Search mode keeps
+When the width is short, the fetch, scope and version segments are dropped,
+in that order, so a message (not a spinner alone) keeps 20 cells; the branch is
+never dropped, its name shrinks instead. Failed jumps flash as warnings. Search mode keeps
 its input line as today. `Status()` keeps returning plain text (tests).
 
 ## Approaches

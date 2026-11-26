@@ -128,3 +128,50 @@ func TestStatusBarKeepsRoomForMessages(t *testing.T) {
 	assert.Contains(t, plain, iconError+" error: push", "a message is not squeezed out by optional segments")
 	assert.NotContains(t, plain, "fetched")
 }
+
+func TestFailedJumpIsAWarning(t *testing.T) {
+	m := barModel(t)
+	_ = m.flashWarn("jump", "could not find x in the first 300 commits")
+	assert.Equal(t, fgOf(colors.Yellow), iconFg(t, m.statusBar(), iconWarn))
+}
+
+func TestStatusBarKeepsBranchWhenNarrow(t *testing.T) {
+	m := barModel(t).WithVersion("v1.2.3")
+	m.branch = "feature/" + strings.Repeat("x", 40)
+	for _, w := range []int{50, 60, 70} {
+		m.width = w
+		m.fetching = true
+		plain := ansi.Strip(m.statusBar())
+		assert.Contains(t, plain, iconBranch+" feature/", "width %d while fetching: %q", w, plain)
+		assert.Equal(t, w, lipgloss.Width(m.statusBar()))
+		m.fetching = false
+		m.setStatus("action", "error: push rejected by the remote")
+		plain = ansi.Strip(m.statusBar())
+		assert.Contains(t, plain, iconBranch+" feature/", "width %d with an error: %q", w, plain)
+		assert.Contains(t, plain, "error: push")
+		m.setStatus("action", "")
+	}
+}
+
+func TestSpinnerAloneDoesNotHideSegments(t *testing.T) {
+	m := barModel(t).WithVersion("v1.2.3")
+	m.width = 52 // everything fits only without a reserved message room
+	idle := ansi.Strip(m.statusBar())
+	m.fetching = true
+	busy := ansi.Strip(m.statusBar())
+	assert.Equal(t, strings.Contains(idle, "local branches"), strings.Contains(busy, "local branches"), "idle %q busy %q", idle, busy)
+}
+
+func TestLongStatusEndingInEllipsisIsNotBusy(t *testing.T) {
+	m := barModel(t)
+	m.setStatus("action", strings.Repeat("rejected ", 40)) // capped by oneLine with "…"
+	assert.Equal(t, fgOf(colors.Yellow), iconFg(t, m.statusBar(), iconWarn))
+}
+
+func TestRepoNameNewlineDoesNotBreakBar(t *testing.T) {
+	m := barModel(t)
+	m.repoName = "evil\nname"
+	bar := m.statusBar()
+	assert.NotContains(t, bar, "\n")
+	assert.Equal(t, m.width, lipgloss.Width(bar))
+}
