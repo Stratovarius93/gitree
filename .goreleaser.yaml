@@ -1,0 +1,36 @@
+# GoReleaser builds the release binaries. The release itself (tag and notes)
+# is created by hand; the workflow in .github/workflows/release.yml then runs
+# GoReleaser, which uploads the archives to that release and keeps its notes.
+version: 2
+
+project_name: gitree
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin # Windows is not supported yet (git commands use Unix process groups)
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version=v{{ .Version }}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  disable: true
+
+release:
+  mode: keep-existing

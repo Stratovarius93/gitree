@@ -58,6 +58,16 @@ With Homebrew (macOS):
 brew install stratovarius93/tap/gitree
 ```
 
+Or download a prebuilt binary for Linux or macOS (amd64 and arm64) from the
+[latest release](https://github.com/Stratovarius93/gitree/releases/latest),
+for example on Linux (x86-64):
+
+```sh
+VERSION=0.4.0  # the latest release, without the "v"
+curl -sL "https://github.com/Stratovarius93/gitree/releases/download/v${VERSION}/gitree_${VERSION}_linux_amd64.tar.gz" | tar -xz gitree
+sudo mv gitree /usr/local/bin/
+```
+
 Or with Go:
 
 ```sh
