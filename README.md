@@ -15,9 +15,10 @@ a colored commit graph, branch and tag labels in their own column, pull
 request status, author and date, all in one keyboard-driven view.
 </p>
 
+![Commit graph with lane tints, the current-branch connector and the Powerline status bar](docs/screenshots/graph.png)
+
 ![Diff preview of a changed file](docs/screenshots/diff-preview.png)
 
-![In-app help with keys, dialogs and the PR icon legend](docs/screenshots/help.png)
 
 ## Install
 
