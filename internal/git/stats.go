@@ -1,6 +1,7 @@
 package git
 
 import (
+	"context"
 	"strconv"
 	"strings"
 )
@@ -18,8 +19,12 @@ func (r *Repo) Stats(hashes []string) (map[string]Stat, error) {
 	if len(hashes) == 0 {
 		return res, nil
 	}
-	args := append([]string{"log", "--no-walk=unsorted", "--format=%x1e%H", "--numstat"}, hashes...)
-	out, err := r.run(append(args, "--")...)
+	// Hashes go through stdin: a jump can load tens of thousands, past the
+	// argv limit. GIT_NO_LAZY_FETCH keeps a partial clone from downloading
+	// missing blobs just to count lines (the call fails instead).
+	out, err := r.runStdin(context.Background(), []string{"GIT_NO_LAZY_FETCH=1"}, nil,
+		strings.Join(hashes, "\n")+"\n",
+		"log", "--no-walk=unsorted", "--stdin", "--format=%x1e%H", "--numstat", "--")
 	if err != nil {
 		return nil, err
 	}

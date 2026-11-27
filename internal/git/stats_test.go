@@ -49,3 +49,20 @@ func TestStatsNoHashes(t *testing.T) {
 	assert.NotNil(t, st)
 	assert.Empty(t, st)
 }
+
+// TestStatsNoLazyFetch: in a blobless partial clone, Stats must not download
+// missing blobs from the promisor remote just to count lines.
+func TestStatsNoLazyFetch(t *testing.T) {
+	bare, seed := testutil.NewOrigin(t)
+	h := seed.Commit("two", map[string]string{"x.txt": "1\n2\n"})
+	seed.Git("push", "-q", "origin", "main")
+	seed.Git("-C", bare, "config", "uploadpack.allowFilter", "true")
+	dir := t.TempDir()
+	seed.Git("clone", "-q", "--no-checkout", "--filter=blob:none", "file://"+bare, dir)
+	count := func() string { return seed.Git("-C", dir, "count-objects", "-v") }
+	before := count()
+	r, err := Open(dir)
+	require.NoError(t, err)
+	_, _ = r.Stats([]string{h}) // may fail without the blobs; must not fetch them
+	assert.Equal(t, before, count(), "no blobs fetched")
+}

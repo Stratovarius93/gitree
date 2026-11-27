@@ -67,8 +67,16 @@ func (r *Repo) runAllow(okCodes []int, args ...string) (string, error) {
 // runCtx is runAllow with a context (the process is killed when it ends) and
 // extra environment entries.
 func (r *Repo) runCtx(ctx context.Context, env []string, okCodes []int, args ...string) (string, error) {
+	return r.runStdin(ctx, env, okCodes, "", args...)
+}
+
+// runStdin is runCtx with stdin fed to git (empty: no input).
+func (r *Repo) runStdin(ctx context.Context, env []string, okCodes []int, stdin string, args ...string) (string, error) {
 	full := append([]string{"-C", r.root}, args...)
 	cmd := exec.CommandContext(ctx, "git", full...)
+	if stdin != "" {
+		cmd.Stdin = strings.NewReader(stdin)
+	}
 	// Detach from the controlling terminal (so ssh and credential helpers cannot
 	// prompt on the TUI's tty and simply fail) and put git and its children in
 	// their own process group, so cancelling kills ssh / git-remote-* too

@@ -78,8 +78,9 @@ type (
 	}
 	// statsLoadedMsg carries line totals for commits; see loadStats.
 	statsLoadedMsg struct {
-		stats map[string]git.Stat
-		err   error
+		hashes []string // requested; no longer in flight
+		stats  map[string]git.Stat
+		err    error
 	}
 )
 
@@ -103,6 +104,9 @@ type Model struct {
 	// stats caches commit line totals by hash. A commit's totals never
 	// change, so the cache survives reloads.
 	stats map[string]git.Stat
+	// statsInFlight holds hashes whose stats are being fetched, so a page
+	// arriving meanwhile does not request them again.
+	statsInFlight map[string]bool
 
 	// layout is derived from commits in relayout only; cursor moves
 	// re-render just the visible window of it (see View).
@@ -186,6 +190,8 @@ func New(repo *git.Repo, sys System) Model {
 		execProcess: tea.ExecProcess,
 		stashSeen:   map[string]bool{},
 		stats:       map[string]git.Stat{},
+
+		statsInFlight: map[string]bool{},
 	}
 }
 
@@ -217,27 +223,33 @@ func (m Model) loadLogN(skip, limit int, appendPage bool) tea.Cmd {
 	}
 }
 
-// missingStats lists the hashes of commits whose stats are not cached.
+// missingStats lists the hashes of commits whose stats are neither cached
+// nor being fetched.
 func (m Model) missingStats(commits []git.Commit) []string {
 	var out []string
 	for _, c := range commits {
-		if _, ok := m.stats[c.Hash]; !ok {
+		if _, ok := m.stats[c.Hash]; !ok && !m.statsInFlight[c.Hash] {
 			out = append(out, c.Hash)
 		}
 	}
 	return out
 }
 
-// loadStats fetches the line totals of commits not cached yet (nil when all are).
+// loadStats fetches the line totals of commits not cached or in flight yet
+// (nil when there are none) and marks them in flight. statsInFlight is a
+// map shared by every copy of the model, so the mark sticks.
 func (m Model) loadStats(commits []git.Commit) tea.Cmd {
 	hashes := m.missingStats(commits)
-	if len(hashes) == 0 {
+	if len(hashes) == 0 || m.statsInFlight == nil {
 		return nil
+	}
+	for _, h := range hashes {
+		m.statsInFlight[h] = true
 	}
 	repo := m.repo
 	return func() tea.Msg {
 		st, err := repo.Stats(hashes)
-		return statsLoadedMsg{stats: st, err: err}
+		return statsLoadedMsg{hashes: hashes, stats: st, err: err}
 	}
 }
 
@@ -334,6 +346,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Stats for the page load in the background; the graph never waits.
 		return nm, tea.Batch(cmd, nm.(Model).loadStats(msg.commits))
 	case statsLoadedMsg:
+		for _, h := range msg.hashes {
+			delete(m.statsInFlight, h)
+		}
 		if msg.err != nil {
 			return m, nil // the column keeps its loading look; never an error
 		}

@@ -68,3 +68,23 @@ func TestStatsErrorIsSilent(t *testing.T) {
 	assert.False(t, strings.Contains(m.Status(), "boom"))
 	assert.Equal(t, git.Stat{Added: 1}, m.stats[h])
 }
+
+// TestStatsNotRefetchedWhileInFlight: a page arriving while its hashes are
+// being fetched does not request them again; a failed fetch frees them.
+func TestStatsNotRefetchedWhileInFlight(t *testing.T) {
+	r := testutil.NewRepo(t)
+	r.Commit("first", map[string]string{"a.txt": "1\n"})
+	repo, err := git.Open(r.Dir)
+	require.NoError(t, err)
+	m := New(repo, &fakeSystem{})
+	msg := m.loadLog(0, false)().(logLoadedMsg)
+	m, _ = update(m, msg) // stats command issued but not run
+	hashes := m.missingStats(msg.commits)
+	assert.Empty(t, hashes, "in flight: not missing")
+	m.gen++
+	msg.gen = m.gen
+	m, _ = update(m, msg)
+	assert.Empty(t, m.missingStats(msg.commits))
+	m, _ = update(m, statsLoadedMsg{hashes: []string{msg.commits[0].Hash}, err: errors.New("boom")})
+	assert.Equal(t, []string{msg.commits[0].Hash}, m.missingStats(msg.commits), "a failed fetch can be retried")
+}
