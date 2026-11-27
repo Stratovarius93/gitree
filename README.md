@@ -32,6 +32,9 @@ rebasing. gitree is built for *seeing*: one full-screen table that answers
   crowd the commit message: local and remote branches are merged into one
   pill, ahead/behind counts sit next to the name, and the PR state (open,
   draft, approved, changes requested, merged) shows as an icon, through `gh`.
+- **See how big each commit is.** A CHANGES column shows lines added and
+  removed with a green/red bar, loaded in the background so the graph still
+  opens instantly.
 - **It follows the repo on its own.** Commits, checkouts and branches made in
   another terminal or your editor appear within seconds, and the remote is
   fetched every minute. No need to restart or press refresh.
@@ -63,7 +66,7 @@ Or download a prebuilt binary for Linux or macOS (amd64 and arm64) from the
 for example on Linux (x86-64):
 
 ```sh
-VERSION=0.4.0  # the latest release, without the "v"
+VERSION=0.5.0  # the latest release, without the "v"
 curl -sL "https://github.com/Stratovarius93/gitree/releases/download/v${VERSION}/gitree_${VERSION}_linux_amd64.tar.gz" | tar -xz gitree
 sudo mv gitree /usr/local/bin/
 ```
