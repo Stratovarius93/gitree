@@ -76,6 +76,11 @@ type (
 		branch string
 		err    error
 	}
+	// statsLoadedMsg carries line totals for commits; see loadStats.
+	statsLoadedMsg struct {
+		stats map[string]git.Stat
+		err   error
+	}
 )
 
 // Model is the Bubble Tea model for the whole app.
@@ -95,6 +100,9 @@ type Model struct {
 	branch     string
 	rows       []Row
 	labelWidth int // natural width of the widest label; set in rebuild
+	// stats caches commit line totals by hash. A commit's totals never
+	// change, so the cache survives reloads.
+	stats map[string]git.Stat
 
 	// layout is derived from commits in relayout only; cursor moves
 	// re-render just the visible window of it (see View).
@@ -177,6 +185,7 @@ func New(repo *git.Repo, sys System) Model {
 
 		execProcess: tea.ExecProcess,
 		stashSeen:   map[string]bool{},
+		stats:       map[string]git.Stat{},
 	}
 }
 
@@ -205,6 +214,30 @@ func (m Model) loadLogN(skip, limit int, appendPage bool) tea.Cmd {
 		}
 		commits, err := repo.Log(scope, skip, limit)
 		return logLoadedMsg{gen: gen, scope: scope, limit: limit, skip: skip, commits: commits, append: appendPage, err: err, fp: fp}
+	}
+}
+
+// missingStats lists the hashes of commits whose stats are not cached.
+func (m Model) missingStats(commits []git.Commit) []string {
+	var out []string
+	for _, c := range commits {
+		if _, ok := m.stats[c.Hash]; !ok {
+			out = append(out, c.Hash)
+		}
+	}
+	return out
+}
+
+// loadStats fetches the line totals of commits not cached yet (nil when all are).
+func (m Model) loadStats(commits []git.Commit) tea.Cmd {
+	hashes := m.missingStats(commits)
+	if len(hashes) == 0 {
+		return nil
+	}
+	repo := m.repo
+	return func() tea.Msg {
+		st, err := repo.Stats(hashes)
+		return statsLoadedMsg{stats: st, err: err}
 	}
 }
 
@@ -297,7 +330,20 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case previewDiffMsg:
 		return m.onPreviewDiff(msg)
 	case logLoadedMsg:
-		return m.onLog(msg)
+		nm, cmd := m.onLog(msg)
+		// Stats for the page load in the background; the graph never waits.
+		return nm, tea.Batch(cmd, nm.(Model).loadStats(msg.commits))
+	case statsLoadedMsg:
+		if msg.err != nil {
+			return m, nil // the column keeps its loading look; never an error
+		}
+		if m.stats == nil {
+			m.stats = map[string]git.Stat{}
+		}
+		for h, st := range msg.stats {
+			m.stats[h] = st
+		}
+		return m, nil
 	case refsLoadedMsg:
 		return m.onRefs(msg)
 	case wipLoadedMsg:
@@ -702,6 +748,11 @@ func (m Model) View() string {
 			r := m.rows[i]
 			if k := i - wip - from; r.Kind == RowCommit && k >= 0 && k < len(graphLines) {
 				r.Graph = graphLines[k]
+			}
+			if r.Kind == RowCommit {
+				if st, ok := m.stats[r.Commit.Hash]; ok {
+					r.Stat = &st
+				}
 			}
 			lines = append(lines, RenderRow(r, w, i == m.cursor, now))
 		}

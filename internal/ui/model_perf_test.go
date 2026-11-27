@@ -210,6 +210,13 @@ func TestGraphHighlightFollowsCursor(t *testing.T) {
 			hash = c.Hash
 		}
 		ref := BuildRows(m.commits, m.wip, m.track, m.prs, hash)
+		for k := range ref { // View attaches the cached stats
+			if ref[k].Kind == RowCommit {
+				if st, ok := m.stats[ref[k].Commit.Hash]; ok {
+					ref[k].Stat = &st
+				}
+			}
+		}
 		w := ComputeWidths(m.width, m.visibleGraphWidth(), m.labelWidth, m.visibleAuthorWidth())
 		view := strings.Split(m.View(), "\n")
 		var want []string
