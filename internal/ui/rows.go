@@ -29,6 +29,7 @@ type Row struct {
 	Graph    string
 	Lane     int
 	WIPCount int
+	Stat     *git.Stat // line totals; nil while not loaded
 }
 
 // graphSymbols is the lazygit symbol set used for the graph. Box drawing is the
@@ -179,12 +180,13 @@ func RenderRow(r Row, w Widths, selected bool, now time.Time) string {
 		msgFg, msgStyle = colors.FgFloat, base.Bold(true)
 	}
 
-	var label, gph, msg, author, date, hash string
+	var label, gph, msg, changes, author, date, hash string
 	switch r.Kind {
 	case RowWIP:
 		label = RenderLabels([]Label{{Name: "// WIP", Kind: LabelBranch}}, hex, w.Label)
 		gph = fit(base.Foreground(lipgloss.Color(hex)).Render(strings.Repeat("  ", r.Lane)+"◌"), w.Graph)
 		msg = msgStyle.Foreground(lipgloss.Color(msgFg)).Render(fit(wipMessage(r.WIPCount), w.Message))
+		changes = text("", w.Changes, colors.Gray)
 		author, date, hash = text("", w.Author, colors.Gray), text("", w.Date, colors.Gray), text("", w.Hash, colors.Gray)
 	default:
 		c := r.Commit
@@ -195,6 +197,7 @@ func RenderRow(r Row, w Widths, selected bool, now time.Time) string {
 		}
 		gph = fit(r.Graph, w.Graph)
 		msg = msgStyle.Foreground(lipgloss.Color(msgFg)).Render(fit(c.Subject, w.Message))
+		changes = fit(changesCell(r.Stat, base), w.Changes)
 		author = text(authorName(c.AuthorName), w.Author, colors.Fg)
 		date = text(RelativeTime(c.Time, now), w.Date, colors.Gray)
 		short := c.Hash
@@ -213,7 +216,7 @@ func RenderRow(r Row, w Widths, selected bool, now time.Time) string {
 	if selected {
 		label, gph = withBg(label, colors.SelBg), withBg(gph, colors.SelBg)
 	}
-	byKey := map[string]string{"label": label, "graph": gph, "message": msg, "author": author, "date": date, "hash": hash}
+	byKey := map[string]string{"label": label, "graph": gph, "message": msg, "changes": changes, "author": author, "date": date, "hash": hash}
 	sep := base.Foreground(lipgloss.Color(colors.Separator)).Render(" ┊ ")
 	var b strings.Builder
 	cells := w.cells()
