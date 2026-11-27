@@ -19,7 +19,8 @@ func TestComputeWidthsWide(t *testing.T) {
 	assert.Equal(t, 18, w.Author)
 	assert.Equal(t, 5, w.Date)
 	assert.Equal(t, 7, w.Hash)
-	assert.Equal(t, 160-24-6-18-5-7-5*3, w.Message)
+	assert.Equal(t, 22, w.Changes)
+	assert.Equal(t, 160-24-6-22-18-5-7-6*3, w.Message)
 }
 
 func TestComputeWidthsNarrow(t *testing.T) {
@@ -39,7 +40,7 @@ func TestComputeWidthsInvariants(t *testing.T) {
 			for total := 1; total <= 200; total++ {
 				w := ComputeWidths(total, g, lw, 18)
 				assert.GreaterOrEqual(t, w.Message, 1, "total %d graph %d label %d", total, g, lw)
-				for _, f := range []int{w.Label, w.Graph, w.Author, w.Date, w.Hash} {
+				for _, f := range []int{w.Label, w.Graph, w.Changes, w.Author, w.Date, w.Hash} {
 					assert.GreaterOrEqual(t, f, 0, "total %d graph %d label %d", total, g, lw)
 				}
 				assert.LessOrEqual(t, w.Label, 45, "total %d graph %d label %d", total, g, lw)
@@ -231,6 +232,34 @@ func TestAuthorShrinksFirst(t *testing.T) {
 				if w.Message < 30 || w.Graph < g {
 					assert.Equal(t, authorMin, w.Author, "total %d graph %d author %d: author shrinks first", total, g, aw)
 				}
+			}
+		}
+	}
+}
+
+func TestComputeWidthsChanges(t *testing.T) {
+	w := ComputeWidths(160, 6, 0, 18)
+	assert.True(t, w.ShowChanges)
+	assert.Equal(t, 22, w.Changes)
+	assert.Equal(t, 160-24-6-22-18-5-7-6*3, w.Message)
+	assert.Contains(t, ansi.Strip(RenderHeader(w)), "CHANGES")
+	var keys []string
+	for _, c := range w.cells() {
+		keys = append(keys, c.key)
+	}
+	assert.Equal(t, []string{"label", "graph", "message", "changes", "author", "date", "hash"}, keys)
+}
+
+func TestComputeWidthsChangesHidesFirst(t *testing.T) {
+	w := ComputeWidths(119, 6, 0, 18)
+	assert.False(t, w.ShowChanges)
+	assert.True(t, w.ShowDate)
+	for total := 120; total <= 200; total++ {
+		for _, g := range []int{6, 30, 60} {
+			w := ComputeWidths(total, g, 0, 18)
+			if w.ShowChanges {
+				assert.GreaterOrEqual(t, w.Message, 30, "total %d graph %d", total, g)
+				assert.Equal(t, g, w.Graph, "total %d graph %d", total, g)
 			}
 		}
 	}

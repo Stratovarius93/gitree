@@ -13,15 +13,17 @@ const sepWidth = 3 // " ┊ "
 // Widths holds the cell widths of the table. Columns with width 0 (or hidden)
 // are omitted together with their separator.
 type Widths struct {
-	Label, Graph, Message, Author, Date, Hash int
-	ShowAuthor, ShowDate, ShowHash            bool
+	Label, Graph, Message, Changes, Author, Date, Hash int
+	ShowChanges, ShowAuthor, ShowDate, ShowHash        bool
 }
 
-// Visibility thresholds on the total width: Date hides first, then Author, then Hash.
+// Visibility thresholds on the total width: Changes hides first, then Date,
+// then Author, then Hash.
 const (
-	minTotalDate   = 100
-	minTotalAuthor = 80
-	minTotalHash   = 50
+	minTotalChanges = 120
+	minTotalDate    = 100
+	minTotalAuthor  = 80
+	minTotalHash    = 50
 )
 
 // ComputeWidths lays out the table in total cells for a graph that needs
@@ -41,11 +43,25 @@ const (
 // up its cells first: it shrinks toward authorMin before the message drops
 // below 30 cells or the graph is clipped, and is then hidden by the usual
 // order.
+//
+// The CHANGES column (changesWidth cells) is shown from minTotalChanges on,
+// and only if it takes its cells from the message alone, leaving it at least
+// 30: it is dropped before the label, graph or author give up anything.
 func ComputeWidths(total, graphWidth, labelWant, authorNames int) Widths {
+	without := computeWidths(total, graphWidth, labelWant, authorNames, false)
+	w := computeWidths(total, graphWidth, labelWant, authorNames, true)
+	if w.ShowChanges && w.Message >= 30 && w.Graph == without.Graph &&
+		w.Label == without.Label && w.Author == without.Author {
+		return w
+	}
+	return without
+}
+
+func computeWidths(total, graphWidth, labelWant, authorNames int, changes bool) Widths {
 	want := min(max(authorNames, authorMin), authorWant)
 	var w Widths
 	for a := want; a >= authorMin; a-- {
-		w = layout(total, graphWidth, labelWant, a)
+		w = layout(total, graphWidth, labelWant, a, changes)
 		if !w.ShowAuthor || (w.Label >= 24 && w.Message >= 30 && w.Graph >= graphWidth) {
 			return w
 		}
@@ -53,13 +69,16 @@ func ComputeWidths(total, graphWidth, labelWant, authorNames int) Widths {
 	return w
 }
 
+// changesWidth: a 10-cell bar, a space and two 5-cell counts ("+NNNN -NNNN").
+const changesWidth = 22
+
 // Author column widths: preferred maximum and minimum (the header's width).
 const (
 	authorWant = 18
 	authorMin  = 6
 )
 
-func layout(total, graphWidth, labelWant, authorW int) Widths {
+func layout(total, graphWidth, labelWant, authorW int, changes bool) Widths {
 	if total < 1 {
 		total = 1
 	}
@@ -67,9 +86,13 @@ func layout(total, graphWidth, labelWant, authorW int) Widths {
 		graphWidth = 0
 	}
 	w := Widths{
-		ShowDate:   total >= minTotalDate,
-		ShowAuthor: total >= minTotalAuthor,
-		ShowHash:   total >= minTotalHash,
+		ShowChanges: changes && total >= minTotalChanges,
+		ShowDate:    total >= minTotalDate,
+		ShowAuthor:  total >= minTotalAuthor,
+		ShowHash:    total >= minTotalHash,
+	}
+	if w.ShowChanges {
+		w.Changes = changesWidth
 	}
 	if w.ShowDate {
 		w.Date = 5
@@ -135,7 +158,7 @@ func layout(total, graphWidth, labelWant, authorW int) Widths {
 // columns counts the visible columns (Message always counts).
 func (w Widths) columns() int {
 	n := 1
-	for _, c := range []int{w.Label, w.Graph, w.Author, w.Date, w.Hash} {
+	for _, c := range []int{w.Label, w.Graph, w.Changes, w.Author, w.Date, w.Hash} {
 		if c > 0 {
 			n++
 		}
@@ -145,14 +168,14 @@ func (w Widths) columns() int {
 
 // sum is the total rendered width: cells plus separators.
 func (w Widths) sum() int {
-	return w.Label + w.Graph + w.Message + w.Author + w.Date + w.Hash + sepWidth*(w.columns()-1)
+	return w.Label + w.Graph + w.Message + w.Changes + w.Author + w.Date + w.Hash + sepWidth*(w.columns()-1)
 }
 
 // cells returns the visible column widths in order, with a matching key.
 func (w Widths) cells() []cell {
 	all := []cell{
 		{"label", w.Label}, {"graph", w.Graph}, {"message", w.Message},
-		{"author", w.Author}, {"date", w.Date}, {"hash", w.Hash},
+		{"changes", w.Changes}, {"author", w.Author}, {"date", w.Date}, {"hash", w.Hash},
 	}
 	var out []cell
 	for _, c := range all {
@@ -176,7 +199,7 @@ func sepStyle() lipgloss.Style {
 func RenderHeader(w Widths) string {
 	titles := map[string]string{
 		"label": " BRANCH / TAG", "graph": " GRAPH", "message": " MESSAGE",
-		"author": "AUTHOR", "date": "DATE", "hash": "HASH",
+		"changes": "CHANGES", "author": "AUTHOR", "date": "DATE", "hash": "HASH",
 	}
 	// Titles that do not fit are clipped, without "…" (which reads as data).
 	head := lipgloss.NewStyle().Foreground(lipgloss.Color(colors.Gray))
